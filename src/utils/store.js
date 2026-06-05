@@ -93,11 +93,10 @@ export function createDefaultTripData(opts = {}) {
     members: [],
     luggage: {},
     info: {
-      flights: {
-        outbound: { date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' },
-        inbound: { date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' },
-        transfer: { date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' },
-      },
+      flights: [
+        { id: 'f1', type: 'outbound', date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' },
+        { id: 'f2', type: 'inbound', date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' },
+      ],
       accommodations: [],
     },
     itinerary,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTripStore, uid } from '../utils/store';
 import {
   Plane,
@@ -16,39 +16,51 @@ import {
 
 const emptyFlight = { date: '', flightNo: '', airline: '', depTime: '', arrTime: '', depCode: '', depName: '', arrCode: '', arrName: '' };
 
+const FLIGHT_TYPES = [
+  { value: 'outbound', label: '去程', icon: PlaneTakeoff, headerBg: 'bg-primary', headerText: 'text-white' },
+  { value: 'inbound', label: '回程', icon: PlaneLanding, headerBg: 'bg-accent', headerText: 'text-primary-dark' },
+  { value: 'transfer', label: '轉機 / 移動', icon: Plane, headerBg: 'bg-primary-light', headerText: 'text-white' },
+];
+
+function getFlightMeta(type) {
+  return FLIGHT_TYPES.find(t => t.value === type) || FLIGHT_TYPES[2];
+}
+
 function isFilled(f) {
   return f && f.depCode && f.arrCode;
 }
 
-function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
+function TicketCard({ flight, onUpdate, onDelete }) {
   const f = flight || emptyFlight;
   const filled = isFilled(f);
   const [editing, setEditing] = useState(!filled);
+  const meta = getFlightMeta(f.type);
+  const Icon = meta.icon;
 
   const set = (field, value) => onUpdate({ ...f, [field]: value });
 
-  const Icon = type === 'outbound' ? PlaneTakeoff : type === 'inbound' ? PlaneLanding : Plane;
-
-  // --- Display Mode ---
   if (filled && !editing) {
     return (
       <div className="bg-white rounded-2xl overflow-hidden border border-border">
-        <div className={`${headerBg} ${headerText} px-4 py-2 flex items-center justify-between`}>
+        <div className={`${meta.headerBg} ${meta.headerText} px-4 py-2 flex items-center justify-between`}>
           <span className="text-xs font-semibold tracking-wider">BOARDING PASS</span>
           <div className="flex items-center gap-1">
             <Icon size={14} />
-            <span className="text-xs font-medium">{label}</span>
+            <span className="text-xs font-medium">{meta.label}</span>
           </div>
         </div>
         <div className="p-4 relative">
-          <button
-            onClick={() => setEditing(true)}
-            className="absolute top-3 right-3 p-1.5 rounded-lg text-primary-light hover:text-primary hover:bg-border/50 transition"
-          >
-            <Pencil size={14} />
-          </button>
+          <div className="absolute top-3 right-3 flex items-center gap-0.5">
+            <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-primary-light hover:text-primary hover:bg-border/50 transition">
+              <Pencil size={14} />
+            </button>
+            {onDelete && (
+              <button onClick={onDelete} className="p-1.5 rounded-lg text-primary-light hover:text-red-500 hover:bg-red-50 transition">
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
 
-          {/* Airport codes */}
           <div className="flex items-center justify-between mb-1">
             <div className="text-center min-w-[60px]">
               <p className="text-3xl font-bold text-primary-dark leading-tight">{f.depCode}</p>
@@ -65,7 +77,6 @@ function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
             </div>
           </div>
 
-          {/* Details row */}
           <div className="border-t border-dashed border-border mt-3 pt-3">
             <div className="grid grid-cols-4 gap-1 text-center">
               <div>
@@ -94,18 +105,39 @@ function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
     );
   }
 
-  // --- Edit Mode ---
+  // Edit mode
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-border">
-      <div className={`${headerBg} ${headerText} px-4 py-2 flex items-center justify-between`}>
+      <div className={`${meta.headerBg} ${meta.headerText} px-4 py-2 flex items-center justify-between`}>
         <span className="text-xs font-semibold tracking-wider">BOARDING PASS</span>
         <div className="flex items-center gap-1">
           <Icon size={14} />
-          <span className="text-xs font-medium">{label}</span>
+          <span className="text-xs font-medium">{meta.label}</span>
         </div>
       </div>
       <div className="p-4 space-y-3">
-        {/* Airport codes row */}
+        {/* Type selector */}
+        <div>
+          <label className="text-[10px] text-primary-light mb-1 block">機票類型</label>
+          <div className="flex gap-2">
+            {FLIGHT_TYPES.map(t => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => set('type', t.value)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition ${
+                  f.type === t.value
+                    ? 'bg-primary text-white'
+                    : 'bg-surface text-primary-light hover:bg-border'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Airport codes */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <label className="text-[10px] text-primary-light mb-1 block">出發機場</label>
@@ -118,7 +150,6 @@ function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
           </div>
         </div>
 
-        {/* Airport names */}
         <div className="grid grid-cols-2 gap-3">
           <input type="text" value={f.depName} onChange={e => set('depName', e.target.value)} placeholder="出發機場名稱" className="px-2.5 py-1.5 rounded-lg border border-border text-primary-dark text-xs focus:outline-none focus:border-primary transition" />
           <input type="text" value={f.arrName} onChange={e => set('arrName', e.target.value)} placeholder="抵達機場名稱" className="px-2.5 py-1.5 rounded-lg border border-border text-primary-dark text-xs focus:outline-none focus:border-primary transition" />
@@ -126,7 +157,6 @@ function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
 
         <div className="border-t border-dashed border-border" />
 
-        {/* Flight details */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-[10px] text-primary-light mb-1 block">日期</label>
@@ -152,14 +182,25 @@ function TicketCard({ flight, type, label, headerBg, headerText, onUpdate }) {
           </div>
         </div>
 
-        <button
-          onClick={() => { if (isFilled(f)) setEditing(false); }}
-          disabled={!isFilled(f)}
-          className="w-full py-2.5 rounded-xl bg-primary text-white text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition"
-        >
-          <Check size={16} />
-          完成
-        </button>
+        <div className="flex gap-2">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="py-2.5 px-4 rounded-xl border border-border text-red-500 text-sm font-medium hover:bg-red-50 transition"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => { if (isFilled(f)) setEditing(false); }}
+            disabled={!isFilled(f)}
+            className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <Check size={16} />
+            完成
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -173,7 +214,6 @@ function AccommodationCard({ acc, index, onUpdate, onDelete }) {
   const filled = isAccFilled(acc);
   const [editing, setEditing] = useState(!filled);
 
-  // Display mode
   if (filled && !editing) {
     return (
       <div className="bg-white rounded-2xl overflow-hidden border border-border">
@@ -186,29 +226,20 @@ function AccommodationCard({ acc, index, onUpdate, onDelete }) {
         </div>
         <div className="p-4 relative">
           <div className="absolute top-3 right-3 flex items-center gap-1">
-            <button
-              onClick={() => setEditing(true)}
-              className="p-1.5 rounded-lg text-primary-light hover:text-primary hover:bg-border/50 transition"
-            >
+            <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-primary-light hover:text-primary hover:bg-border/50 transition">
               <Pencil size={14} />
             </button>
-            <button
-              onClick={onDelete}
-              className="p-1.5 rounded-lg text-primary-light hover:text-red-500 hover:bg-red-50 transition"
-            >
+            <button onClick={onDelete} className="p-1.5 rounded-lg text-primary-light hover:text-red-500 hover:bg-red-50 transition">
               <Trash2 size={14} />
             </button>
           </div>
-
           <h3 className="text-lg font-bold text-primary-dark pr-16">{acc.name}</h3>
-
           {acc.address && (
             <div className="flex items-start gap-1.5 mt-2">
               <MapPin size={13} className="text-primary-light mt-0.5 shrink-0" />
               <p className="text-xs text-primary-light leading-relaxed">{acc.address}</p>
             </div>
           )}
-
           {(acc.checkIn || acc.checkOut) && (
             <div className="border-t border-dashed border-border mt-3 pt-3">
               <div className="grid grid-cols-2 gap-4">
@@ -233,7 +264,6 @@ function AccommodationCard({ acc, index, onUpdate, onDelete }) {
               </div>
             </div>
           )}
-
           {acc.address && (
             <div className="flex gap-2 mt-3">
               <a
@@ -251,45 +281,31 @@ function AccommodationCard({ acc, index, onUpdate, onDelete }) {
     );
   }
 
-  // Edit mode
   return (
     <div className="bg-white border border-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-primary bg-border px-2.5 py-1 rounded-full">
-          住宿 {index + 1}
-        </span>
-        <button
-          onClick={onDelete}
-          className="p-1.5 rounded-lg text-primary-light hover:text-red-500 hover:bg-red-50 transition"
-        >
+        <span className="text-xs font-semibold text-primary bg-border px-2.5 py-1 rounded-full">住宿 {index + 1}</span>
+        <button onClick={onDelete} className="p-1.5 rounded-lg text-primary-light hover:text-red-500 hover:bg-red-50 transition">
           <Trash2 size={16} />
         </button>
       </div>
       <div className="space-y-3">
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1">
-            <Building2 size={13} /> 名稱
-          </label>
-          <input type="text" value={acc.name} onChange={(e) => onUpdate('name', e.target.value)} placeholder="飯店 / 民宿名稱" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
+          <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1"><Building2 size={13} /> 名稱</label>
+          <input type="text" value={acc.name} onChange={e => onUpdate('name', e.target.value)} placeholder="飯店 / 民宿名稱" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
         </div>
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1">
-            <MapPin size={13} /> 地址
-          </label>
-          <input type="text" value={acc.address} onChange={(e) => onUpdate('address', e.target.value)} placeholder="住宿地址" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
+          <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1"><MapPin size={13} /> 地址</label>
+          <input type="text" value={acc.address} onChange={e => onUpdate('address', e.target.value)} placeholder="住宿地址" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1">
-              <CalendarCheck size={13} /> 入住
-            </label>
-            <input type="text" value={acc.checkIn} onChange={(e) => onUpdate('checkIn', e.target.value)} placeholder="月/日" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
+            <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1"><CalendarCheck size={13} /> 入住</label>
+            <input type="text" value={acc.checkIn} onChange={e => onUpdate('checkIn', e.target.value)} placeholder="月/日" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1">
-              <CalendarX size={13} /> 退房
-            </label>
-            <input type="text" value={acc.checkOut} onChange={(e) => onUpdate('checkOut', e.target.value)} placeholder="月/日" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
+            <label className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1"><CalendarX size={13} /> 退房</label>
+            <input type="text" value={acc.checkOut} onChange={e => onUpdate('checkOut', e.target.value)} placeholder="月/日" className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-white text-primary-dark placeholder:text-primary-light/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition text-sm" />
           </div>
         </div>
         <button
@@ -297,8 +313,7 @@ function AccommodationCard({ acc, index, onUpdate, onDelete }) {
           disabled={!isAccFilled(acc)}
           className="w-full py-2.5 rounded-xl bg-primary text-white text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition"
         >
-          <Check size={16} />
-          完成
+          <Check size={16} /> 完成
         </button>
       </div>
     </div>
@@ -310,40 +325,57 @@ export default function Info({ tripId }) {
 
   if (!data) return null;
 
-  const { flights, accommodations } = data.info;
+  // Migrate old object-based flights to array format
+  const rawFlights = data.info?.flights;
+  const flights = Array.isArray(rawFlights) ? rawFlights : [];
 
-  // Migrate old string-based flight data to structured format
-  useEffect(() => {
-    const needsMigration = !flights ||
-      typeof flights.outbound === 'string' ||
-      typeof flights.inbound === 'string' ||
-      typeof flights.transfer === 'string';
-    if (needsMigration) {
-      update(prev => ({
-        ...prev,
-        info: {
-          ...prev.info,
-          flights: {
-            outbound: { ...emptyFlight },
-            inbound: { ...emptyFlight },
-            transfer: { ...emptyFlight },
-          },
-        },
-      }));
+  if (!Array.isArray(rawFlights) && rawFlights) {
+    // One-time migration from { outbound, inbound, transfer } to array
+    const migrated = [];
+    if (rawFlights.outbound) migrated.push({ ...rawFlights.outbound, id: uid(), type: 'outbound' });
+    if (rawFlights.inbound) migrated.push({ ...rawFlights.inbound, id: uid(), type: 'inbound' });
+    if (rawFlights.transfer && isFilled(rawFlights.transfer)) migrated.push({ ...rawFlights.transfer, id: uid(), type: 'transfer' });
+    if (migrated.length === 0) {
+      migrated.push({ ...emptyFlight, id: uid(), type: 'outbound' });
+      migrated.push({ ...emptyFlight, id: uid(), type: 'inbound' });
     }
-  }, []);
+    update(prev => ({
+      ...prev,
+      info: { ...prev.info, flights: migrated },
+    }));
+  }
 
-  const ensureFlight = (f) => {
-    if (!f || typeof f === 'string') return { ...emptyFlight };
-    return f;
-  };
+  const accommodations = data.info?.accommodations || [];
 
-  const updateFlight = (key, value) => {
+  const updateFlight = (id, value) => {
     update(prev => ({
       ...prev,
       info: {
         ...prev.info,
-        flights: { ...prev.info.flights, [key]: value },
+        flights: (prev.info.flights || []).map(f => f.id === id ? { ...value, id } : f),
+      },
+    }));
+  };
+
+  const deleteFlight = (id) => {
+    update(prev => ({
+      ...prev,
+      info: {
+        ...prev.info,
+        flights: (prev.info.flights || []).filter(f => f.id !== id),
+      },
+    }));
+  };
+
+  const addFlight = () => {
+    update(prev => ({
+      ...prev,
+      info: {
+        ...prev.info,
+        flights: [
+          ...(prev.info.flights || []),
+          { ...emptyFlight, id: uid(), type: 'outbound' },
+        ],
       },
     }));
   };
@@ -366,9 +398,7 @@ export default function Info({ tripId }) {
       ...prev,
       info: {
         ...prev.info,
-        accommodations: prev.info.accommodations.map(a =>
-          a.id === id ? { ...a, [field]: value } : a
-        ),
+        accommodations: prev.info.accommodations.map(a => a.id === id ? { ...a, [field]: value } : a),
       },
     }));
   };
@@ -390,42 +420,47 @@ export default function Info({ tripId }) {
         <p className="text-sm text-primary-light mt-0.5">航班與住宿資訊</p>
       </div>
 
+      {/* Flights */}
       <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-accent-light flex items-center justify-center">
-            <Plane size={18} className="text-primary" />
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-accent-light flex items-center justify-center">
+              <Plane size={18} className="text-primary" />
+            </div>
+            <h2 className="text-base font-semibold text-primary-dark">航班資訊</h2>
           </div>
-          <h2 className="text-base font-semibold text-primary-dark">航班資訊</h2>
+          <button
+            onClick={addFlight}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-dark transition"
+          >
+            <Plus size={14} />
+            新增機票
+          </button>
         </div>
 
-        <div className="space-y-3">
-          <TicketCard
-            flight={ensureFlight(flights.outbound)}
-            type="outbound"
-            label="去程"
-            headerBg="bg-primary"
-            headerText="text-white"
-            onUpdate={(v) => updateFlight('outbound', v)}
-          />
-          <TicketCard
-            flight={ensureFlight(flights.transfer)}
-            type="transfer"
-            label="轉機 / 移動"
-            headerBg="bg-primary-light"
-            headerText="text-white"
-            onUpdate={(v) => updateFlight('transfer', v)}
-          />
-          <TicketCard
-            flight={ensureFlight(flights.inbound)}
-            type="inbound"
-            label="回程"
-            headerBg="bg-accent"
-            headerText="text-primary-dark"
-            onUpdate={(v) => updateFlight('inbound', v)}
-          />
-        </div>
+        {flights.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center bg-white border border-border rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-border flex items-center justify-center mb-3">
+              <Plane size={24} className="text-primary-light" />
+            </div>
+            <p className="text-primary-dark font-medium mb-1">尚未新增航班</p>
+            <p className="text-primary-light text-sm">點擊上方「新增機票」加入航班資訊</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {flights.map(flight => (
+              <TicketCard
+                key={flight.id}
+                flight={flight}
+                onUpdate={(v) => updateFlight(flight.id, v)}
+                onDelete={flights.length > 1 ? () => deleteFlight(flight.id) : null}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
+      {/* Accommodations */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
